@@ -1,0 +1,790 @@
+Here's a comprehensive set of Python modules implementing zodiac sign algorithms for multi-domain applications:
+
+1. Core Zodiac Engine Module (zodiac_core.py)
+
+```python
+import datetime
+from enum import Enum
+from dataclasses import dataclass
+from typing import Dict, List, Tuple, Optional, Any
+import math
+
+class ZodiacSign(Enum):
+    ARIES = "Aries"
+    TAURUS = "Taurus"
+    GEMINI = "Gemini"
+    CANCER = "Cancer"
+    LEO = "Leo"
+    VIRGO = "Virgo"
+    LIBRA = "Libra"
+    SCORPIO = "Scorpio"
+    SAGITTARIUS = "Sagittarius"
+    CAPRICORN = "Capricorn"
+    AQUARIUS = "Aquarius"
+    PISCES = "Pisces"
+
+class Element(Enum):
+    FIRE = "Fire"
+    EARTH = "Earth"
+    AIR = "Air"
+    WATER = "Water"
+
+class Modality(Enum):
+    CARDINAL = "Cardinal"
+    FIXED = "Fixed"
+    MUTABLE = "Mutable"
+
+@dataclass
+class ZodiacProfile:
+    sign: ZodiacSign
+    element: Element
+    modality: Modality
+    ruling_planet: str
+    symbol: str
+    dates: Tuple[datetime.date, datetime.date]
+    traits: List[str]
+    positive_traits: List[str]
+    challenging_traits: List[str]
+    compatibility_score: Dict['ZodiacSign', float] = None
+    
+class ZodiacEngine:
+    """Core engine for zodiac calculations and analysis"""
+    
+    def __init__(self):
+        self.signs = self._initialize_signs()
+        self.element_affinities = {
+            Element.FIRE: {Element.FIRE: 0.9, Element.AIR: 0.8, Element.EARTH: 0.4, Element.WATER: 0.3},
+            Element.EARTH: {Element.EARTH: 0.9, Element.WATER: 0.8, Element.FIRE: 0.4, Element.AIR: 0.3},
+            Element.AIR: {Element.AIR: 0.9, Element.FIRE: 0.8, Element.WATER: 0.4, Element.EARTH: 0.3},
+            Element.WATER: {Element.WATER: 0.9, Element.EARTH: 0.8, Element.AIR: 0.4, Element.FIRE: 0.3}
+        }
+        
+    def _initialize_signs(self) -> Dict[ZodiacSign, ZodiacProfile]:
+        """Initialize all zodiac signs with their attributes"""
+        current_year = datetime.date.today().year
+        
+        return {
+            ZodiacSign.ARIES: ZodiacProfile(
+                sign=ZodiacSign.ARIES,
+                element=Element.FIRE,
+                modality=Modality.CARDINAL,
+                ruling_planet="Mars",
+                symbol="♈",
+                dates=(
+                    datetime.date(current_year, 3, 21),
+                    datetime.date(current_year, 4, 19)
+                ),
+                traits=["bold", "competitive", "energetic", "pioneering"],
+                positive_traits=["courageous", "determined", "confident", "enthusiastic"],
+                challenging_traits=["impulsive", "short-tempered", "impatient", "aggressive"]
+            ),
+            # ... Initialize all other signs similarly
+        }
+    
+    def get_sign_from_date(self, date: datetime.date) -> Optional[ZodiacProfile]:
+        """Determine zodiac sign from birth date"""
+        for sign, profile in self.signs.items():
+            if profile.dates[0] <= date.replace(year=profile.dates[0].year) <= profile.dates[1]:
+                return profile
+        return None
+    
+    def calculate_compatibility(self, sign1: ZodiacSign, sign2: ZodiacSign) -> Dict[str, Any]:
+        """Calculate compatibility between two signs"""
+        profile1 = self.signs[sign1]
+        profile2 = self.signs[sign2]
+        
+        # Element compatibility
+        element_score = self.element_affinities[profile1.element][profile2.element]
+        
+        # Modality synergy (1 = high, 0.5 = medium, 0.2 = low)
+        modality_matrix = {
+            (Modality.CARDINAL, Modality.CARDINAL): 0.8,
+            (Modality.FIXED, Modality.FIXED): 0.9,
+            (Modality.MUTABLE, Modality.MUTABLE): 0.7,
+            (Modality.CARDINAL, Modality.MUTABLE): 0.6,
+            (Modality.CARDINAL, Modality.FIXED): 0.4,
+            (Modality.FIXED, Modality.MUTABLE): 0.5
+        }
+        modality_key = (profile1.modality, profile2.modality)
+        modality_score = modality_matrix.get(modality_key, 0.5)
+        
+        # Astrological aspect (trine = 120°, sextile = 60°, square = 90°, opposition = 180°)
+        aspect_score = self._calculate_aspect_score(sign1, sign2)
+        
+        total_score = (element_score * 0.4 + modality_score * 0.3 + aspect_score * 0.3) * 100
+        
+        return {
+            "total_score": round(total_score, 2),
+            "element_compatibility": round(element_score * 100, 2),
+            "modality_synergy": round(modality_score * 100, 2),
+            "aspect_harmony": round(aspect_score * 100, 2),
+            "strengths": self._get_compatibility_strengths(sign1, sign2),
+            "challenges": self._get_compatibility_challenges(sign1, sign2)
+        }
+    
+    def _calculate_aspect_score(self, sign1: ZodiacSign, sign2: ZodiacSign) -> float:
+        """Calculate astrological aspect score between signs"""
+        sign_order = list(ZodiacSign)
+        idx1 = sign_order.index(sign1)
+        idx2 = sign_order.index(sign2)
+        
+        distance = min(abs(idx1 - idx2), 12 - abs(idx1 - idx2))
+        
+        # Aspect scores based on angular distance
+        if distance == 0:  # Conjunction
+            return 0.7
+        elif distance == 3:  # Square (90°)
+            return 0.4
+        elif distance == 4:  # Trine (120°)
+            return 0.9
+        elif distance == 6:  # Opposition (180°)
+            return 0.3
+        elif distance == 2:  # Sextile (60°)
+            return 0.8
+        else:
+            return 0.5
+    
+    def get_personality_vector(self, sign: ZodiacSign) -> List[float]:
+        """Create a normalized personality vector for machine learning"""
+        traits_map = {
+            "leadership": [ZodiacSign.ARIES, ZodiacSign.LEO, ZodiacSign.CAPRICORN],
+            "creativity": [ZodiacSign.GEMINI, ZodiacSign.LEO, ZodiacSign.PISCES],
+            "analytical": [ZodiacSign.VIRGO, ZodiacSign.AQUARIUS, ZodiacSign.SCORPIO],
+            "emotional": [ZodiacSign.CANCER, ZodiacSign.PISCES, ZodiacSign.SCORPIO],
+            "practical": [ZodiacSign.TAURUS, ZodiacSign.VIRGO, ZodiacSign.CAPRICORN],
+            "social": [ZodiacSign.GEMINI, ZodiacSign.LIBRA, ZodiacSign.AQUARIUS],
+            "adventurous": [ZodiacSign.ARIES, ZodiacSign.SAGITTARIUS],
+            "loyal": [ZodiacSign.TAURUS, ZodiacSign.CANCER, ZodiacSign.LEO],
+            "intellectual": [ZodiacSign.GEMINI, ZodiacSign.VIRGO, ZodiacSign.AQUARIUS],
+            "spiritual": [ZodiacSign.CANCER, ZodiacSign.SCORPIO, ZodiacSign.PISCES]
+        }
+        
+        vector = []
+        for trait, signs in traits_map.items():
+            if sign in signs:
+                strength = 1.0 / len(signs)  # Normalize
+                vector.append(strength)
+            else:
+                vector.append(0.0)
+        
+        # Normalize vector
+        norm = math.sqrt(sum(x**2 for x in vector))
+        return [x/norm for x in vector] if norm > 0 else vector
+```
+
+2. Recommendation System Module (zodiac_recommender.py)
+
+```python
+from typing import List, Dict, Any
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+class ZodiacRecommender:
+    """Zodiac-based recommendation engine for various domains"""
+    
+    def __init__(self, zodiac_engine):
+        self.zodiac = zodiac_engine
+        self.trait_vectors = self._build_trait_database()
+        
+    def _build_trait_database(self) -> Dict[ZodiacSign, np.array]:
+        """Build database of zodiac personality vectors"""
+        vectors = {}
+        for sign in ZodiacSign:
+            vectors[sign] = np.array(self.zodiac.get_personality_vector(sign))
+        return vectors
+    
+    def recommend_content(self, user_sign: ZodiacSign, 
+                         content_pool: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Recommend content based on zodiac traits"""
+        user_vector = self.trait_vectors[user_sign]
+        scored_content = []
+        
+        for item in content_pool:
+            # Extract or calculate content traits
+            content_traits = self._extract_content_traits(item)
+            content_vector = np.array(content_traits)
+            
+            # Calculate similarity
+            similarity = cosine_similarity([user_vector], [content_vector])[0][0]
+            
+            # Adjust score based on zodiac-specific preferences
+            zodiac_modifier = self._get_zodiac_preference_score(user_sign, item)
+            final_score = similarity * zodiac_modifier
+            
+            scored_content.append({
+                **item,
+                "relevance_score": float(final_score),
+                "zodiac_match": user_sign.value
+            })
+        
+        return sorted(scored_content, key=lambda x: x["relevance_score"], reverse=True)
+    
+    def match_team_members(self, team_requirements: Dict[str, float]) -> List[ZodiacSign]:
+        """Optimize team composition based on required traits"""
+        required_traits = np.array(list(team_requirements.values()))
+        
+        best_team = []
+        available_signs = list(ZodiacSign)
+        
+        # Use greedy algorithm to build balanced team
+        for _ in range(min(4, len(available_signs))):  # Team of up to 4
+            best_sign = None
+            best_score = -1
+            
+            for sign in available_signs:
+                sign_vector = self.trait_vectors[sign]
+                score = np.dot(sign_vector, required_traits)
+                
+                # Penalize duplicate elements in team
+                existing_elements = [self.zodiac.signs[s].element for s in best_team]
+                element_diversity = 1.0 if self.zodiac.signs[sign].element not in existing_elements else 0.7
+                
+                adjusted_score = score * element_diversity
+                
+                if adjusted_score > best_score:
+                    best_score = adjusted_score
+                    best_sign = sign
+            
+            if best_sign:
+                best_team.append(best_sign)
+                available_signs.remove(best_sign)
+                
+                # Update requirements (diminishing need)
+                for i in range(len(required_traits)):
+                    required_traits[i] *= 0.8
+        
+        return best_team
+    
+    def career_recommendations(self, sign: ZodiacSign) -> Dict[str, List[str]]:
+        """Generate career recommendations based on zodiac strengths"""
+        career_map = {
+            ZodiacSign.ARIES: ["Entrepreneur", "Athlete", "Military Officer", "Surgeon"],
+            ZodiacSign.TAURUS: ["Banker", "Chef", "Artist", "Real Estate Agent"],
+            ZodiacSign.GEMINI: ["Journalist", "Teacher", "Sales", "Writer"],
+            ZodiacSign.CANCER: ["Nurse", "Historian", "Real Estate", "Social Worker"],
+            ZodiacSign.LEO: ["Actor", "Manager", "Politician", "Designer"],
+            ZodiacSign.VIRGO: ["Researcher", "Accountant", "Editor", "Pharmacist"],
+            ZodiacSign.LIBRA: ["Lawyer", "Mediator", "Artist", "HR Manager"],
+            ZodiacSign.SCORPIO: ["Detective", "Psychologist", "Researcher", "Surgeon"],
+            ZodiacSign.SAGITTARIUS: ["Professor", "Travel Guide", "Philosopher", "Entrepreneur"],
+            ZodiacSign.CAPRICORN: ["CEO", "Engineer", "Architect", "Administrator"],
+            ZodiacSign.AQUARIUS: ["Scientist", "Inventor", "Programmer", "Social Activist"],
+            ZodiacSign.PISCES: ["Artist", "Musician", "Therapist", "Veterinarian"]
+        }
+        
+        profile = self.zodiac.signs[sign]
+        return {
+            "ideal_careers": career_map[sign],
+            "strengths": profile.positive_traits,
+            "work_style": self._describe_work_style(sign),
+            "compatible_teammates": self._get_work_compatibility(sign)
+        }
+```
+
+3. Gaming & AI Integration Module (zodiac_gaming.py)
+
+```python
+import random
+from abc import ABC, abstractmethod
+
+class ZodiacCharacterFactory:
+    """Factory for creating game characters based on zodiac signs"""
+    
+    @staticmethod
+    def create_character(sign: ZodiacSign, character_class: str = None) -> Dict[str, Any]:
+        """Create RPG character with zodiac-based attributes"""
+        base_stats = {
+            ZodiacSign.ARIES: {"strength": 9, "intelligence": 5, "charisma": 7, "agility": 8},
+            ZodiacSign.TAURUS: {"strength": 8, "intelligence": 6, "charisma": 7, "agility": 5},
+            # ... Define for all signs
+        }
+        
+        # Get base stats for sign
+        stats = base_stats.get(sign, {"strength": 6, "intelligence": 6, "charisma": 6, "agility": 6})
+        
+        # Adjust based on element
+        element_bonus = {
+            Element.FIRE: {"strength": +2, "agility": +1},
+            Element.EARTH: {"strength": +1, "intelligence": +2},
+            Element.AIR: {"intelligence": +2, "charisma": +1},
+            Element.WATER: {"charisma": +2, "agility": +1}
+        }
+        
+        element = ZodiacEngine().signs[sign].element
+        if element in element_bonus:
+            for stat, bonus in element_bonus[element].items():
+                stats[stat] += bonus
+        
+        # Special abilities based on sign
+        abilities = ZodiacCharacterFactory._get_special_abilities(sign)
+        
+        return {
+            "zodiac": sign.value,
+            "symbol": ZodiacEngine().signs[sign].symbol,
+            "stats": stats,
+            "abilities": abilities,
+            "element": element.value,
+            "personality_traits": ZodiacEngine().signs[sign].traits[:3]
+        }
+    
+    @staticmethod
+    def _get_special_abilities(sign: ZodiacSign) -> List[Dict[str, Any]]:
+        """Generate special abilities for game characters"""
+        abilities_map = {
+            ZodiacSign.ARIES: [
+                {"name": "Warrior's Charge", "type": "attack", "power": 15, "cooldown": 3},
+                {"name": "Leadership Aura", "type": "buff", "effect": "team_damage+20%"}
+            ],
+            ZodiacSign.TAURUS: [
+                {"name": "Earth Shield", "type": "defense", "protection": 20},
+                {"name": "Financial Instinct", "type": "passive", "effect": "gold+30%"}
+            ],
+            # ... Define for all signs
+        }
+        return abilities_map.get(sign, [])
+
+class ZodiacAIAgent(ABC):
+    """Base class for zodiac-based AI agents"""
+    
+    def __init__(self, sign: ZodiacSign):
+        self.sign = sign
+        self.profile = ZodiacEngine().signs[sign]
+        self.decision_style = self._get_decision_style()
+        
+    def make_decision(self, options: List[Any], context: Dict[str, Any]) -> Any:
+        """Make decisions based on zodiac personality traits"""
+        scores = []
+        
+        for option in options:
+            score = 0
+            
+            # Score based on element preferences
+            if self.profile.element == Element.FIRE:
+                score += self._score_aggressive_options(option, context)
+            elif self.profile.element == Element.EARTH:
+                score += self._score_practical_options(option, context)
+            elif self.profile.element == Element.AIR:
+                score += self._score_intellectual_options(option, context)
+            elif self.profile.element == Element.WATER:
+                score += self._score_emotional_options(option, context)
+            
+            # Modality influence
+            if self.profile.modality == Modality.CARDINAL:
+                score *= 1.2  # Favor initiating actions
+            elif self.profile.modality == Modality.FIXED:
+                score *= 0.9  # Slight resistance to change
+                
+            scores.append(score)
+        
+        # Add some randomness based on sign's impulsivity
+        randomness_factor = self._get_randomness_factor()
+        if random.random() < randomness_factor:
+            return random.choice(options)
+        
+        return options[scores.index(max(scores))]
+    
+    def _get_randomness_factor(self) -> float:
+        """Get decision randomness based on sign traits"""
+        impulsive_signs = [ZodiacSign.ARIES, ZodiacSign.GEMINI, ZodiacSign.SAGITTARIUS]
+        cautious_signs = [ZodiacSign.TAURUS, ZodiacSign.VIRGO, ZodiacSign.CAPRICORN]
+        
+        if self.sign in impulsive_signs:
+            return 0.3
+        elif self.sign in cautious_signs:
+            return 0.1
+        return 0.2
+```
+
+4. Health & Wellness Module (zodiac_wellness.py)
+
+```python
+class ZodiacWellnessAdvisor:
+    """Health and wellness recommendations based on zodiac signs"""
+    
+    def __init__(self):
+        self.zodiac = ZodiacEngine()
+        self.health_profiles = self._load_health_profiles()
+        
+    def _load_health_profiles(self) -> Dict[ZodiacSign, Dict[str, Any]]:
+        """Load zodiac-specific health information"""
+        return {
+            ZodiacSign.ARIES: {
+                "vulnerable_areas": ["head", "face"],
+                "common_issues": ["headaches", "stress", "accidents"],
+                "recommended_exercise": ["HIIT", "martial_arts", "competitive_sports"],
+                "diet_focus": ["protein", "iron", "vitamin_b"],
+                "stress_relief": ["intense_exercise", "adventure", "competition"]
+            },
+            ZodiacSign.TAURUS: {
+                "vulnerable_areas": ["throat", "neck", "thyroid"],
+                "common_issues": ["throat_infections", "weight_gain", "stiffness"],
+                "recommended_exercise": ["strength_training", "yoga", "gardening"],
+                "diet_focus": ["leafy_greens", "calcium", "fiber"],
+                "stress_relief": ["massage", "nature_walks", "comfort_foods"]
+            },
+            # ... Define for all signs
+        }
+    
+    def generate_workout_plan(self, sign: ZodiacSign, fitness_level: str = "beginner") -> Dict[str, Any]:
+        """Generate personalized workout plan"""
+        profile = self.health_profiles[sign]
+        
+        plans = {
+            "beginner": {
+                "frequency": "3 times/week",
+                "duration": "30 minutes",
+                "focus": "building consistency"
+            },
+            "intermediate": {
+                "frequency": "4-5 times/week",
+                "duration": "45-60 minutes",
+                "focus": "strength building"
+            },
+            "advanced": {
+                "frequency": "5-6 times/week",
+                "duration": "60-90 minutes",
+                "focus": "peak performance"
+            }
+        }
+        
+        base_plan = plans[fitness_level]
+        
+        # Customize based on zodiac
+        if sign in [ZodiacSign.ARIES, ZodiacSign.LEO, ZodiacSign.SAGITTARIUS]:  # Fire signs
+            base_plan["intensity"] = "high"
+            base_plan["preferred_time"] = "morning"
+        elif sign in [ZodiacSign.TAURUS, ZodiacSign.VIRGO, ZodiacSign.CAPRICORN]:  # Earth signs
+            base_plan["intensity"] = "moderate"
+            base_plan["preferred_time"] = "afternoon"
+            
+        return {
+            **base_plan,
+            "recommended_activities": profile["recommended_exercise"],
+            "weekly_schedule": self._build_weekly_schedule(sign, fitness_level),
+            "motivation_tips": self._get_motivation_tips(sign)
+        }
+    
+    def daily_wellness_tips(self, sign: ZodiacSign) -> List[str]:
+        """Generate daily wellness tips"""
+        tips = []
+        profile = self.zodiac.signs[sign]
+        
+        # Morning routine
+        if profile.element == Element.FIRE:
+            tips.append("Start with 10 minutes of high-energy movement")
+        elif profile.element == Element.WATER:
+            tips.append("Begin with meditation or journaling")
+        
+        # Diet tips
+        health_profile = self.health_profiles[sign]
+        tips.append(f"Focus on {health_profile['diet_focus'][0]} in today's meals")
+        
+        # Stress management
+        tips.append(f"When stressed, try: {health_profile['stress_relief'][0]}")
+        
+        # Evening wind-down
+        if profile.modality == Modality.CARDINAL:
+            tips.append("Plan tomorrow's priorities before bed")
+        elif profile.modality == Modality.MUTABLE:
+            tips.append("Practice gentle stretching before sleep")
+        
+        return tips
+```
+
+5. Business & Marketing Module (zodiac_marketing.py)
+
+```python
+import json
+from datetime import datetime
+from collections import defaultdict
+
+class ZodiacMarketingEngine:
+    """Marketing and business strategies based on zodiac analytics"""
+    
+    def __init__(self):
+        self.zodiac = ZodiacEngine()
+        self.consumer_profiles = self._build_consumer_archetypes()
+        
+    def _build_consumer_archetypes(self) -> Dict[ZodiacSign, Dict[str, Any]]:
+        """Build consumer behavior profiles for each sign"""
+        return {
+            ZodiacSign.ARIES: {
+                "buying_style": "impulsive",
+                "price_sensitivity": "low",
+                "brand_loyalty": "medium",
+                "preferred_channels": ["social_media", "in_store"],
+                "trigger_words": ["new", "limited", "exclusive", "first"],
+                "decision_speed": "fast"
+            },
+            ZodiacSign.TAURUS: {
+                "buying_style": "deliberate",
+                "price_sensitivity": "medium",
+                "brand_loyalty": "high",
+                "preferred_channels": ["email", "physical_store"],
+                "trigger_words": ["quality", "value", "luxury", "durable"],
+                "decision_speed": "slow"
+            },
+            # ... Define for all signs
+        }
+    
+    def segment_campaign(self, target_signs: List[ZodiacSign], 
+                        campaign_type: str = "email") -> Dict[str, Any]:
+        """Create segmented marketing campaign"""
+        segments = {}
+        
+        for sign in target_signs:
+            profile = self.consumer_profiles[sign]
+            zodiac_profile = self.zodiac.signs[sign]
+            
+            segment = {
+                "audience_name": f"{sign.value}_Buyers",
+                "messaging_tone": self._get_messaging_tone(zodiac_profile.element),
+                "best_time_to_contact": self._get_best_contact_time(sign),
+                "offer_strategy": self._get_offer_strategy(sign),
+                "creative_elements": self._get_creative_elements(sign),
+                "cta_style": self._get_cta_style(sign)
+            }
+            
+            segments[sign.value] = segment
+        
+        return segments
+    
+    def predict_sales_trends(self, start_date: datetime, 
+                           end_date: datetime) -> Dict[str, List[float]]:
+        """Predict sales trends based on zodiac seasons"""
+        trends = defaultdict(list)
+        current_date = start_date
+        
+        while current_date <= end_date:
+            # Get current zodiac season
+            current_sign = self.zodiac.get_sign_from_date(current_date)
+            
+            if current_sign:
+                # Calculate seasonal influence
+                seasonal_factor = self._get_seasonal_factor(current_date, current_sign)
+                
+                # Element-based spending patterns
+                if current_sign.element == Element.FIRE:
+                    trends["luxury_goods"].append(seasonal_factor * 1.2)
+                    trends["sports_equipment"].append(seasonal_factor * 1.3)
+                elif current_sign.element == Element.EARTH:
+                    trends["home_goods"].append(seasonal_factor * 1.4)
+                    trends["financial_services"].append(seasonal_factor * 1.1)
+                # ... for all elements
+                
+            current_date += datetime.timedelta(days=1)
+        
+        return trends
+    
+    def optimize_pricing_strategy(self, product_type: str, 
+                                target_demographics: Dict) -> Dict[str, float]:
+        """Optimize pricing based on zodiac of target audience"""
+        base_price = 100.0  # Example base price
+        
+        optimized_prices = {}
+        
+        for sign in ZodiacSign:
+            profile = self.consumer_profiles[sign]
+            
+            # Adjust price based on buying style
+            if profile["buying_style"] == "impulsive":
+                price_multiplier = 1.15  # Can charge more
+            elif profile["buying_style"] == "deliberate":
+                price_multiplier = 0.95  # Need competitive pricing
+            
+            # Adjust for price sensitivity
+            if profile["price_sensitivity"] == "low":
+                price_multiplier *= 1.1
+            elif profile["price_sensitivity"] == "high":
+                price_multiplier *= 0.9
+            
+            # Bundle strategy
+            if profile["decision_speed"] == "slow":
+                bundle_discount = 0.15  # Offer bundles
+                final_price = base_price * price_multiplier * (1 - bundle_discount)
+            else:
+                final_price = base_price * price_multiplier
+            
+            optimized_prices[sign.value] = round(final_price, 2)
+        
+        return optimized_prices
+```
+
+6. API Interface (zodiac_api.py)
+
+```python
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+import datetime
+
+app = FastAPI(title="Zodiac Intelligence API")
+
+# Initialize engines
+zodiac_engine = ZodiacEngine()
+recommender = ZodiacRecommender(zodiac_engine)
+wellness_advisor = ZodiacWellnessAdvisor()
+marketing_engine = ZodiacMarketingEngine()
+
+class BirthDateRequest(BaseModel):
+    date: datetime.date
+
+class CompatibilityRequest(BaseModel):
+    sign1: str
+    sign2: str
+
+class RecommendationRequest(BaseModel):
+    sign: str
+    content_type: Optional[str] = "general"
+    limit: Optional[int] = 10
+
+@app.get("/sign/{date}")
+async def get_zodiac_sign(date: datetime.date):
+    """Get zodiac sign for given date"""
+    sign = zodiac_engine.get_sign_from_date(date)
+    if not sign:
+        raise HTTPException(status_code=404, detail="Invalid date")
+    return sign
+
+@app.post("/compatibility")
+async def calculate_compatibility(request: CompatibilityRequest):
+    """Calculate compatibility between two signs"""
+    try:
+        sign1 = ZodiacSign[request.sign1.upper()]
+        sign2 = ZodiacSign[request.sign2.upper()]
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Invalid zodiac sign")
+    
+    return zodiac_engine.calculate_compatibility(sign1, sign2)
+
+@app.get("/wellness/{sign}/daily")
+async def get_daily_wellness(sign: str):
+    """Get daily wellness tips for zodiac sign"""
+    try:
+        zodiac_sign = ZodiacSign[sign.upper()]
+        return {
+            "tips": wellness_advisor.daily_wellness_tips(zodiac_sign),
+            "date": datetime.date.today().isoformat()
+        }
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Invalid zodiac sign")
+
+@app.post("/recommendations")
+async def get_recommendations(request: RecommendationRequest):
+    """Get personalized recommendations"""
+    try:
+        zodiac_sign = ZodiacSign[request.sign.upper()]
+        
+        if request.content_type == "career":
+            return recommender.career_recommendations(zodiac_sign)
+        elif request.content_type == "wellness":
+            return wellness_advisor.generate_workout_plan(zodiac_sign)
+        else:
+            # General recommendations
+            return {
+                "sign": zodiac_sign.value,
+                "today_focus": zodiac_engine.signs[zodiac_sign].positive_traits[0],
+                "advice": f"Channel your {zodiac_engine.signs[zodiac_sign].element.value} energy today"
+            }
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Invalid zodiac sign")
+
+@app.get("/marketing/segment/{product_type}")
+async def get_marketing_segments(product_type: str):
+    """Get marketing segments for product type"""
+    # Determine target signs based on product type
+    target_map = {
+        "luxury": [ZodiacSign.LEO, ZodiacSign.TAURUS, ZodiacSign.LIBRA],
+        "tech": [ZodiacSign.AQUARIUS, ZodiacSign.GEMINI, ZodiacSign.VIRGO],
+        "wellness": [ZodiacSign.CANCER, ZodiacSign.PISCES, ZodiacSign.VIRGO]
+    }
+    
+    target_signs = target_map.get(product_type, list(ZodiacSign))
+    return marketing_engine.segment_campaign(target_signs)
+```
+
+7. Implementation Examples
+
+```python
+# Example 1: Team Building
+def build_balanced_team(project_type: str):
+    """Build balanced team based on zodiac diversity"""
+    zodiac = ZodiacEngine()
+    
+    # Project requirements mapping
+    requirements = {
+        "startup": {
+            "leadership": 0.9,
+            "creativity": 0.8,
+            "practical": 0.6,
+            "risk_taking": 0.7
+        },
+        "research": {
+            "analytical": 0.9,
+            "intellectual": 0.8,
+            "detail_oriented": 0.7
+        }
+    }
+    
+    req = requirements.get(project_type, {})
+    recommender = ZodiacRecommender(zodiac)
+    team = recommender.match_team_members(req)
+    
+    return [zodiac.signs[s] for s in team]
+
+# Example 2: Personalized Content Delivery
+def deliver_personalized_content(user_id: int, user_sign: ZodiacSign):
+    """Deliver personalized content based on zodiac"""
+    recommender = ZodiacRecommender(ZodiacEngine())
+    
+    # Get content from database
+    content_pool = [
+        {"id": 1, "title": "Morning Motivation", "traits": [0.8, 0.2, 0.1, ...]},
+        {"id": 2, "title": "Meditation Guide", "traits": [0.1, 0.7, 0.3, ...]},
+        # ... more content
+    ]
+    
+    recommendations = recommender.recommend_content(user_sign, content_pool)
+    return recommendations[:5]
+
+# Example 3: Game Character Generation
+def generate_zodiac_based_npcs(num_characters: int):
+    """Generate NPCs for a game"""
+    factory = ZodiacCharacterFactory()
+    npcs = []
+    
+    for _ in range(num_characters):
+        sign = random.choice(list(ZodiacSign))
+        character = factory.create_character(sign)
+        npcs.append(character)
+    
+    return npcs
+
+# Example 4: AI Decision Making
+class CustomerServiceAI(ZodiacAIAgent):
+    """AI customer service agent with zodiac personality"""
+    
+    def handle_complaint(self, complaint: str) -> str:
+        """Handle complaints based on zodiac traits"""
+        if self.profile.element == Element.WATER:
+            # Empathetic approach
+            return f"I understand how you feel. {self._get_water_sign_solution(complaint)}"
+        elif self.profile.element == Element.FIRE:
+            # Direct approach
+            return f"Let's solve this immediately. {self._get_fire_sign_solution(complaint)}"
+```
+
+Potential Applications Across Domains:
+
+1. E-commerce: Product recommendations, dynamic pricing
+2. Healthcare: Personalized wellness plans, stress management
+3. Gaming: Character generation, NPC behavior, quest design
+4. HR/Talent Management: Team building, career counseling
+5. Marketing: Campaign segmentation, ad personalization
+6. Finance: Investment style analysis, risk assessment
+7. Education: Learning style adaptation, study plans
+8. Social Apps: Matchmaking, friend recommendations
+9. Content Creation: Personalized articles, video recommendations
+10. Project Management: Task assignment based on strengths
+
+This system provides a fun, engaging way to incorporate personality-based personalization while maintaining practical utility across multiple domains. The algorithms can be tuned for seriousness (professional applications) or entertainment (games/social apps).
